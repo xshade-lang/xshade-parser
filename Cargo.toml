@@ -1,7 +1,13 @@
 [package]
 name = "xshade-parser"
+description = "Parser and untyped AST for the xshade language."
+license = "MIT"
+repository = "https://github.com/xshade-lang/xshade-parser"
+readme = "readme.md"
+keywords = ["xshade", "graphics", "vulkan", "spir-v", "parser"]
+categories = ["graphics"]
 version = "0.1.0"
-authors = ["Andreas Fischer <home@deviru.de>"]
+authors = ["Andreas Fischer <vengarioth@googlemail.com>", "Marc-Anton Boehm-von Thenen <boehm.marc.anton@gmail.com>"]
 
 [dependencies]
 nom = "4.0.0"
