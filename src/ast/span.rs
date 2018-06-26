@@ -46,3 +46,9 @@ impl fmt::Debug for Span {
         write!(f, "Offset {} Lenght {} Line {} Column {}", self.offset, self.length, self.line, self.column)
     }
 }
+
+impl fmt::Display for Span {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Offset {} Lenght {} Line {} Column {}", self.offset, self.length, self.line, self.column)
+    }
+}

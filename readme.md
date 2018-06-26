@@ -2,6 +2,8 @@
 
 Parser and untyped AST for the xshade language.
 
+Join us on [gitter](https://gitter.im/xshade-lang/).
+
 ## Introduction
 
 `xshade` is a functional shading language targeting SPIR-V. From there SPIR-V tools by khronos can be used to generate glsl or hlsl. This repository contains the parser and resulting abstract syntax tree for xshade.

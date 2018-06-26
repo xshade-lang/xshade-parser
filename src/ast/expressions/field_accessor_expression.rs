@@ -1,4 +1,3 @@
-#[macro_use]
 use ::ast::*;
 
 #[derive(Debug, Eq, PartialEq)]
