@@ -6,7 +6,7 @@ repository = "https://github.com/xshade-lang/xshade-parser"
 readme = "readme.md"
 keywords = ["xshade", "graphics", "rendering", "vulkan", "spir-v", "parser"]
 categories = ["rendering"]
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Andreas Fischer <vengarioth@googlemail.com>", "Marc-Anton Boehm-von Thenen <boehm.marc.anton@gmail.com>"]
 
 [dependencies]
