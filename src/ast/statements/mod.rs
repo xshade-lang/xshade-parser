@@ -8,7 +8,7 @@ pub use self::expression_statement::*;
 pub use self::local_statement::*;
 pub use self::return_statement::*;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Statement {
     /// e.g. a `let` statement
     Local(LocalStatement),

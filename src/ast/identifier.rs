@@ -4,7 +4,7 @@ use ast::*;
 
 type NomSpan<'a> = LocatedSpan<CompleteStr<'a>>;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Identifier {
     pub span: Span,
     pub name: String,

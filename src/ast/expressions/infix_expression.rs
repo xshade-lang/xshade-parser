@@ -1,6 +1,6 @@
 use ::ast::*;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct InfixExpression {
     pub span: Span,
     pub operator: OperatorType,

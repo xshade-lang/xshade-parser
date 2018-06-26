@@ -4,7 +4,7 @@ use nom_locate::LocatedSpan;
 
 type NomSpan<'a> = LocatedSpan<CompleteStr<'a>>;
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub struct Span {
     pub offset: usize,
     pub length: usize,

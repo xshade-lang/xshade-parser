@@ -14,7 +14,7 @@ To use this library, just add it to your Cargo.toml file:
 
 ```toml
 [dependencies]
-xshade_parser = "0.1.0"
+xshade_parser = "0.1"
 ```
 
 ## Usage

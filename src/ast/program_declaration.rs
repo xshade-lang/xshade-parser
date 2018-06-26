@@ -1,6 +1,6 @@
 use ::ast::*;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ProgramDeclaration {
     pub span: Span,
     pub program_name: Identifier,

@@ -18,7 +18,7 @@ pub use self::struct_field_initializer_expression::*;
 pub use self::struct_instantiation_expression::*;
 pub use self::variable_expression::*;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Expression {
     Infix(InfixExpression),
     Literal(LiteralExpression),

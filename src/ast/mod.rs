@@ -1,3 +1,5 @@
+use ::serde_json::{to_string, Error};
+
 pub mod span;
 pub mod identifier;
 pub mod block_declaration;
@@ -36,7 +38,7 @@ pub trait Spanned {
 
 pub type Ast = Vec<AstItem>;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum AstItem {
     Import(ImportDeclaration),
     Export(ExportDeclaration),
@@ -57,4 +59,8 @@ impl Spanned for AstItem {
             AstItem::Block(ref item) => item.span,
         }
     }
+}
+
+pub fn serialize(ast: &Ast) -> Result<String, Error> {
+    to_string(ast)
 }

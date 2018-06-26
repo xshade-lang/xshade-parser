@@ -1,6 +1,6 @@
 use ::ast::*;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct StructFieldInitializerExpression {
     pub span: Span,
     pub struct_field_name: Identifier,
