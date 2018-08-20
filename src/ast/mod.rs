@@ -15,6 +15,7 @@ pub mod statements;
 pub mod expressions;
 pub mod import_declaration;
 pub mod export_declaration;
+pub mod type_identifier;
 
 pub use self::span::*;
 pub use self::identifier::*;
@@ -31,6 +32,7 @@ pub use self::statements::*;
 pub use self::expressions::*;
 pub use self::import_declaration::*;
 pub use self::export_declaration::*;
+pub use self::type_identifier::*;
 
 pub trait Spanned {
     fn get_span(&self) -> Span;

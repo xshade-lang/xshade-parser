@@ -31,5 +31,3 @@ impl Spanned for Identifier {
         self.span
     }
 }
-
-pub type TypeIdentifier = Identifier;

@@ -5,8 +5,8 @@ pub struct FunctionDeclaration {
     pub span: Span,
     pub function_name: Identifier,
     pub arguments: Vec<FunctionArgumentDeclaration>,
-    pub block: BlockDeclaration,
     pub return_type_name: TypeIdentifier,
+    pub block: BlockDeclaration,
 }
 
 impl Spanned for FunctionDeclaration {

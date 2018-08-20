@@ -5,13 +5,15 @@ use ::ast::Span;
 
 pub type ParseResult<T> = Result<T, ParseError>;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum ParseErrorKind {
     Unknown = 0,
     UnrecognizedCharacter = 1,
     MissingOpenCurlyBraces = 1000,
     MissingClosingCurlyBraces = 1001,
     InvalidStructName = 2000,
+    InvalidFunctionName = 3000,
+    MissingArgumentList = 3001,
 }
 
 impl From<u32> for ParseErrorKind {
@@ -20,12 +22,14 @@ impl From<u32> for ParseErrorKind {
         1000 => ParseErrorKind::MissingOpenCurlyBraces,
         1001 => ParseErrorKind::MissingClosingCurlyBraces,
         2000 => ParseErrorKind::InvalidStructName,
+        3000 => ParseErrorKind::InvalidFunctionName,
+        3001 => ParseErrorKind::MissingArgumentList,
         _ => ParseErrorKind::Unknown,
     }
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ParseError {
     span: Span,
     kind: ParseErrorKind,
@@ -58,6 +62,8 @@ impl fmt::Display for ParseError {
             ParseErrorKind::MissingOpenCurlyBraces => write!(f, "ParseError: Missing opening curly braces at {}.", self.span),
             ParseErrorKind::MissingClosingCurlyBraces => write!(f, "ParseError: Missing closing curly braces at {}.", self.span),
             ParseErrorKind::InvalidStructName => write!(f, "ParseError: Invalid struct name at {}.", self.span),
+            ParseErrorKind::InvalidFunctionName => write!(f, "ParseError: Invalid function name at {}.", self.span),
+            ParseErrorKind::MissingArgumentList => write!(f, "ParseError: Missing argument list at {}.", self.span),
         }
     }
 }

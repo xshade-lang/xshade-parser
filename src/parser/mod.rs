@@ -5,22 +5,18 @@ use ::ast::*;
 use ::error::*;
 
 mod ws;
+mod identifier;
+mod structs;
+mod functions;
+mod types;
+
 use self::ws::*;
+pub use self::identifier::*;
+pub use self::structs::*;
+pub use self::functions::*;
+pub use self::types::*;
 
-type NomSpan<'a> = LocatedSpan<CompleteStr<'a>>;
-
-named!(parse_identifier(NomSpan) -> Identifier,
-    do_parse!(
-        span: recognize!(
-            do_parse!(
-                one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") >>
-                many0!(one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")) >>
-                ()
-            )
-        ) >>
-        (Identifier::from_nom_span(&span))
-    )
-);
+pub type NomSpan<'a> = LocatedSpan<CompleteStr<'a>>;
 
 named!(parse_number<NomSpan, NomSpan>,
     recognize!(
@@ -58,55 +54,6 @@ named!(parse_operator<NomSpan, OperatorType>,
         do_parse!(char!('-') >> (OperatorType::Minus)) |
         do_parse!(char!('*') >> (OperatorType::Multiply)) |
         do_parse!(char!('/') >> (OperatorType::Divide))
-    )
-);
-
-named!(parse_struct<NomSpan, AstItem>,
-    do_parse!(
-        // zero or more whitespaces, including line endings and tabs
-        ws0 >>
-        // parse the `struct` keyword
-        from: tag!("struct") >>
-        // after parsing the keyword, return an error if the parser fails
-        data: return_error!(do_parse!(
-            // one or more whitespaces
-            ws1 >>
-            // return `ParseErrorKind::MissingStructName` if the parser fails
-            struct_name: add_return_error!(ErrorKind::Custom(ParseErrorKind::InvalidStructName as u32), parse_identifier) >>
-            ws0 >>
-            // return `ParseErrorKind::MissingOpenCurlyBraces` if none given.
-            add_return_error!(ErrorKind::Custom(ParseErrorKind::MissingOpenCurlyBraces as u32), tag!("{")) >>
-            ws0 >>
-            member: separated_list!(tag!(","), parse_struct_member) >>
-            ws0 >>
-            opt!(tag!(",")) >>
-            ws0 >>
-            // return `ParseErrorKind::MissingClosingCurlyBraces` if none given.
-            to: add_return_error!(ErrorKind::Custom(ParseErrorKind::MissingClosingCurlyBraces as u32), tag!("}")) >>
-            ((struct_name, member, to))
-        )) >>
-        (AstItem::Struct(StructDeclaration{
-            span: Span::from_to(Span::from_nom_span(&from), Span::from_nom_span(&data.2)),
-            struct_name: data.0,
-            struct_member: data.1,
-        }))
-    )
-);
-
-named!(parse_struct_member<NomSpan, StructMemberDeclaration>,
-    do_parse!(
-        ws0 >>
-        struct_member_name: parse_identifier >>
-        ws0 >>
-        tag!(":") >>
-        ws0 >>
-        struct_member_type_name: parse_identifier >>
-        ws0 >>
-        (StructMemberDeclaration{
-            span: Span::from_to(struct_member_name.span, struct_member_type_name.span),
-            struct_member_name: struct_member_name,
-            struct_member_type_name: struct_member_type_name,
-        })
     )
 );
 
@@ -172,39 +119,6 @@ named!(parse_block_declaration<NomSpan, BlockDeclaration>,
         (BlockDeclaration{
             span: Span::from_to(Span::from_nom_span(&from), Span::from_nom_span(&to)),
             statements: statements,
-        })
-    )
-);
-
-named!(parse_function<NomSpan, AstItem>,
-    do_parse!(
-        from: ws!(tag!("fn")) >>
-        function_name: parse_identifier >>
-        ws!(tag!("(")) >>
-        arguments: ws!(separated_list!(tag!(","), parse_function_argument)) >>
-        ws!(tag!(")")) >>
-        ws!(tag!("->")) >>
-        return_type_name: parse_identifier >>
-        block: parse_block_declaration >>
-        (AstItem::Function(FunctionDeclaration{
-            span: Span::from_to(Span::from_nom_span(&from), block.span),
-            function_name: function_name,
-            arguments: arguments,
-            block: block,
-            return_type_name: return_type_name,
-        }))
-    )
-);
-
-named!(parse_function_argument<NomSpan, FunctionArgumentDeclaration>,
-    do_parse!(
-        argument_name: parse_identifier >>
-        ws!(tag!(":")) >>
-        argument_type_name: parse_identifier >>
-        (FunctionArgumentDeclaration{
-            span: Span::from_to(argument_name.span, argument_type_name.span),
-            argument_name: argument_name,
-            argument_type_name: argument_type_name,
         })
     )
 );
@@ -308,13 +222,13 @@ named!(parse_struct_instantiation_field_initializer<NomSpan, StructFieldInitiali
 
 named!(parse_struct_instantiation<NomSpan, Expression>,
     do_parse!(
-        struct_type_name: parse_identifier >>
+        struct_type_name: parse_type_identifier >>
         ws!(tag!("{")) >>
         struct_field_initializer: ws!(separated_list!(tag!(","), parse_struct_instantiation_field_initializer)) >>
         opt!(ws!(tag!(","))) >>
         to: ws!(tag!("}")) >>
         (Expression::StructInstantiation(StructInstantiationExpression{
-            span: Span::from_to(struct_type_name.span, Span::from_nom_span(&to)),
+            span: Span::from_to(struct_type_name.get_span(), Span::from_nom_span(&to)),
             struct_type_name: struct_type_name,
             struct_field_initializer: struct_field_initializer,
         }))
@@ -381,8 +295,6 @@ pub fn parse_str(program: &str) -> ParseResult<Ast> {
             unimplemented!("handle incomplete")
         },
         Err(Err::Error(error)) | Err(Err::Failure(error)) => {
-            println!("{:#?}", error);
-
             match error {
                 Context::Code(a, ErrorKind::Custom(error_number)) => {
                     return Err(ParseError::new(
