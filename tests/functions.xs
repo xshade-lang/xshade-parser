@@ -25,3 +25,7 @@ fn main(a: A, b: B<C>) -> (a: A, b: B<C>) {
 fn identity<T>(item: T) -> T {
 
 }
+
+fn add<T>(a: T, b: T) -> T {
+    
+}

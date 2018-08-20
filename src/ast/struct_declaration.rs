@@ -4,6 +4,7 @@ use ::ast::*;
 pub struct StructDeclaration {
     pub span: Span,
     pub struct_name: Identifier,
+    pub type_arguments: Vec<Identifier>,
     pub struct_member: Vec<StructMemberDeclaration>,
 }
 

@@ -14,6 +14,14 @@ named!(pub parse_struct<NomSpan, AstItem>,
             struct_name: add_return_error!(ErrorKind::Custom(ParseErrorKind::InvalidStructName as u32), parse_identifier) >>
             // zero or more whitespaces, including line endings and tabs
             ws0 >>
+            type_arguments: opt!(do_parse!(
+                tag!("<") >>
+                type_arguments: separated_list!(tag!(","), parse_identifier) >>
+                tag!(">") >>
+                (type_arguments)
+            )) >>
+            // zero or more whitespaces, including line endings and tabs
+            ws0 >>
             // return `ParseErrorKind::MissingOpenCurlyBraces` if none given.
             add_return_error!(ErrorKind::Custom(ParseErrorKind::MissingOpenCurlyBraces as u32), tag!("{")) >>
             // zero or more whitespaces, including line endings and tabs
@@ -26,10 +34,11 @@ named!(pub parse_struct<NomSpan, AstItem>,
             ws0 >>
             // return `ParseErrorKind::MissingClosingCurlyBraces` if none given.
             to: add_return_error!(ErrorKind::Custom(ParseErrorKind::MissingClosingCurlyBraces as u32), tag!("}")) >>
-            ((struct_name, member, to))
+            ((struct_name, member, to, type_arguments))
         )) >>
         (AstItem::Struct(StructDeclaration{
             span: Span::from_to(Span::from_nom_span(&from), Span::from_nom_span(&data.2)),
+            type_arguments: data.3.unwrap_or(vec![]),
             struct_name: data.0,
             struct_member: data.1,
         }))
