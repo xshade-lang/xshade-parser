@@ -4,6 +4,7 @@ use ::ast::*;
 pub struct FunctionDeclaration {
     pub span: Span,
     pub function_name: Identifier,
+    pub type_arguments: Vec<Identifier>,
     pub arguments: Vec<FunctionArgumentDeclaration>,
     pub return_type_name: TypeIdentifier,
     pub block: BlockDeclaration,

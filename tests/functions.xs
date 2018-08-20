@@ -1,11 +1,27 @@
-fn main1() -> void {
+fn main() {
 
 }
 
-fn main2(a: A) -> void {
+fn main() -> () {
 
 }
 
-fn main2(a: A, b: B) -> void {
+fn main(a: A) -> B {
+
+}
+
+fn main(a: A, b: B) -> C {
+
+}
+
+fn main(a: A, b: B) -> C<A, B> {
+
+}
+
+fn main(a: A, b: B<C>) -> (a: A, b: B<C>) {
+
+}
+
+fn identity<T>(item: T) -> T {
 
 }
