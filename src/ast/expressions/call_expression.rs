@@ -12,3 +12,9 @@ impl Spanned for CallExpression {
         self.span
     }
 }
+
+impl Execute for CallExpression {
+    fn execute(&self) -> Option<i32> {
+        None
+    }
+}

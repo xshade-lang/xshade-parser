@@ -12,3 +12,9 @@ impl Spanned for StructFieldInitializerExpression {
         self.span
     }
 }
+
+impl Execute for StructFieldInitializerExpression {
+    fn execute(&self) -> Option<i32> {
+        None
+    }
+}

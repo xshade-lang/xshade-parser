@@ -12,3 +12,9 @@ impl Spanned for IndexAccesorExpression {
         self.span
     }
 }
+
+impl Execute for IndexAccesorExpression {
+    fn execute(&self) -> Option<i32> {
+        None
+    }
+}

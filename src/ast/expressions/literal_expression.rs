@@ -12,3 +12,12 @@ impl Spanned for LiteralExpression {
         self.span
     }
 }
+
+impl Execute for LiteralExpression {
+    fn execute(&self) -> Option<i32> {
+        match self.literal_expression_type {
+            LiteralType::Int => Some(self.value.parse::<i32>().unwrap()),
+            _ => None,
+        }
+    }
+}

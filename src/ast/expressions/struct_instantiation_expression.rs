@@ -12,3 +12,9 @@ impl Spanned for StructInstantiationExpression {
         self.span
     }
 }
+
+impl Execute for StructInstantiationExpression {
+    fn execute(&self) -> Option<i32> {
+        None
+    }
+}

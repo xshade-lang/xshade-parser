@@ -4,6 +4,8 @@ use nom_locate::LocatedSpan;
 use ::ast::*;
 use ::error::*;
 
+mod expressions;
+
 mod ws;
 mod identifier;
 mod structs;
@@ -15,6 +17,7 @@ pub use self::identifier::*;
 pub use self::structs::*;
 pub use self::functions::*;
 pub use self::types::*;
+pub use self::expressions::*;
 
 pub type NomSpan<'a> = LocatedSpan<CompleteStr<'a>>;
 
@@ -26,27 +29,6 @@ named!(parse_number<NomSpan, NomSpan>,
         )
     )
 );
-
-fn parse_float_literal(before: NomSpan, after: NomSpan) -> Expression {
-    let mut a: String = before.fragment.to_string();
-    let b: String = after.fragment.to_string();
-    a.push_str(".");
-    a.push_str(&b);
-    Expression::Literal(LiteralExpression {
-        span: Span::from_to(Span::from_nom_span(&before), Span::from_nom_span(&after)),
-        value: a,
-        literal_expression_type: LiteralType::Float,
-    })
-}
-
-fn parse_int_literal(parts: NomSpan) -> Expression {
-    let string: String = parts.fragment.to_string();
-    Expression::Literal(LiteralExpression {
-        span: Span::from_nom_span(&parts),
-        value: string,
-        literal_expression_type: LiteralType::Int,
-    })
-}
 
 named!(parse_operator<NomSpan, OperatorType>,
     alt!(
@@ -120,140 +102,6 @@ named!(parse_block_declaration<NomSpan, BlockDeclaration>,
             span: Span::from_to(Span::from_nom_span(&from), Span::from_nom_span(&to)),
             statements: statements,
         })
-    )
-);
-
-named!(parse_infix_expression<NomSpan, Expression>,
-    do_parse!(
-        left: parse_expression_no_left_recursion >>
-        operator: parse_operator >>
-        right: parse_expression >>
-        (Expression::Infix(InfixExpression{
-            span: Span::from_to(left.get_span(), right.get_span()),
-            operator: operator,
-            left_hand: Box::new(left),
-            right_hand: Box::new(right),
-        }))
-    )
-);
-
-named!(parse_variable_expression<NomSpan, Expression>,
-    do_parse!(
-        variable_name: parse_identifier >>
-        (Expression::Variable(VariableExpression{
-            span: variable_name.span.clone(),
-            variable_name: variable_name,
-        }))
-    )
-);
-
-named!(parse_call<NomSpan, CallExpression>,
-    do_parse!(
-        function_name: parse_identifier >>
-        ws!(tag!("(")) >>
-        arguments: ws!(separated_list!(tag!(","), parse_expression)) >>
-        to: ws!(tag!(")")) >>
-        (CallExpression {
-            span: Span::from_to(function_name.span, Span::from_nom_span(&to)),
-            function_name: function_name,
-            arguments: arguments,
-        })
-    )
-);
-
-named!(parse_call_expression<NomSpan, Expression>,
-    do_parse!(
-        call: parse_call >>
-        (Expression::Call(call))
-    )
-);
-
-// TODO nested accessor expressions like `a.b.c`
-named!(parse_field_accessor_expression<NomSpan, Expression>,
-    do_parse!(
-        variable_name: parse_identifier >>
-        ws!(tag!(".")) >>
-        field_name: parse_identifier >>
-        (Expression::FieldAccessor(FieldAccessorExpression{
-            span: Span::from_to(variable_name.span, field_name.span),
-            variable_name: variable_name,
-            field_name: field_name,
-        }))
-    )
-);
-
-
-named!(parse_float_literal_expression<NomSpan, Expression>,
-    do_parse!(
-        before: ws!(parse_number) >>
-        ws!(tag!(".")) >>
-        after: ws!(parse_number) >>
-        (parse_float_literal(before, after))
-    )
-);
-
-named!(parse_int_literal_expression<NomSpan, Expression>,
-    do_parse!(
-        numbers: ws!(parse_number) >>
-        (parse_int_literal(numbers))
-    )
-);
-
-// TODO more literals
-named!(parse_literal_expression<NomSpan, Expression>,
-    alt!(
-        parse_float_literal_expression |
-        parse_int_literal_expression
-    )
-);
-
-named!(parse_struct_instantiation_field_initializer<NomSpan, StructFieldInitializerExpression>,
-    do_parse!(
-        struct_field_name: parse_identifier >>
-        ws!(tag!(":")) >>
-        initializer: parse_expression >>
-        (StructFieldInitializerExpression{
-            span: Span::from_to(struct_field_name.span, initializer.get_span()),
-            struct_field_name: struct_field_name,
-            initializer: Box::new(initializer),
-        })
-    )
-);
-
-named!(parse_struct_instantiation<NomSpan, Expression>,
-    do_parse!(
-        struct_type_name: parse_type_identifier >>
-        ws!(tag!("{")) >>
-        struct_field_initializer: ws!(separated_list!(tag!(","), parse_struct_instantiation_field_initializer)) >>
-        opt!(ws!(tag!(","))) >>
-        to: ws!(tag!("}")) >>
-        (Expression::StructInstantiation(StructInstantiationExpression{
-            span: Span::from_to(struct_type_name.get_span(), Span::from_nom_span(&to)),
-            struct_type_name: struct_type_name,
-            struct_field_initializer: struct_field_initializer,
-        }))
-    )
-);
-
-// TODO precedence
-// TODO parentheses
-named!(parse_expression<NomSpan, Expression>,
-    alt!(
-        parse_infix_expression |
-        parse_struct_instantiation |
-        parse_literal_expression |
-        parse_field_accessor_expression |
-        parse_call_expression |
-        parse_variable_expression
-    )
-);
-named!(parse_expression_no_left_recursion<NomSpan, Expression>,
-    alt!(
-        parse_struct_instantiation |
-        parse_literal_expression |
-        parse_field_accessor_expression |
-        parse_call_expression |
-        parse_variable_expression
     )
 );
 

@@ -12,3 +12,9 @@ impl Spanned for FieldAccessorExpression {
         self.span
     }
 }
+
+impl Execute for FieldAccessorExpression {
+    fn execute(&self) -> Option<i32> {
+        None
+    }
+}
