@@ -55,3 +55,7 @@ fn multiple_binary() {
 fn multiple_binary_with_unary() {
     !a * b[a] / -(c[b - c] - -d.f) + !f * ~g;
 }
+
+fn nested_parentheses() {
+    a * (b + c - (d * j + (k * h) - (z - w)) * (k + h - w) * (w * w - (w * w)));
+}
