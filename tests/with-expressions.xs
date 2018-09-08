@@ -47,3 +47,11 @@ fn indexed_indexed_negated() {
 fn ridiculous() {
     !-!~!-b[a].c[5][9].b;
 }
+
+fn multiple_binary() {
+    a * b / c - d + f * g;
+}
+
+fn multiple_binary_with_unary() {
+    !a * b[a] / -(c[b - c] - -d.f) + !f * ~g;
+}

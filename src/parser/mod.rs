@@ -1,5 +1,5 @@
 use nom::types::CompleteStr;
-use nom::{Err, ErrorKind, Context, Needed};
+use nom::{Err, ErrorKind, Context};
 use nom_locate::LocatedSpan;
 use ::ast::*;
 use ::error::*;
@@ -139,7 +139,7 @@ pub fn parse_str(program: &str) -> ParseResult<Ast> {
 
             Ok(ast)
         },
-        Err(Err::Incomplete(needed)) => {
+        Err(Err::Incomplete(_needed)) => {
             unimplemented!("handle incomplete")
         },
         Err(Err::Error(error)) | Err(Err::Failure(error)) => {
