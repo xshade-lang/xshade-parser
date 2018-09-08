@@ -1,46 +1,33 @@
 use ::parser::*;
 
 named!(pub parse_unary<NomSpan, Expression>,
-    alt!(
-        parse_prefixed_unary |
-        parse_non_prefixed_unary
-    )
-);
-
-named!(pub parse_non_prefixed_unary<NomSpan, Expression>,
-    alt!(
-        do_parse!(
-            primary: parse_primary >>
-            unary: many1!(alt!(
-                parse_indexing |
-                parse_field
-            )) >>
-        (fold_unary(primary, unary))) |
-        parse_primary
-    )
-);
-
-named!(parse_prefixed_unary<NomSpan, Expression>,
     do_parse!(
-        ws0 >>
-        prefix: many1!(do_parse!(
-            operator: alt!(
-                tag!("-") |
-                tag!("!") |
-                tag!("~")
-            ) >>
-            ((Span::from_nom_span(&operator), parse_unary_operator_type(&operator)))
-        )) >>
-        ws0 >>
-        expression: parse_non_prefixed_unary >>
-        ws0 >>
-    (fold_prefix_unary(expression, prefix)))
+        prefix: parse_unary_prefix >>
+        primary: parse_primary >>
+        postfix: parse_unary_postfix >>
+    (fold_unary(primary, prefix, postfix)))
 );
 
-fn fold_prefix_unary(mut primary: Expression, mut prefix: Vec<(Span, UnaryOperatorType)>) -> Expression {
+fn fold_unary(mut primary: Expression, mut prefix: Vec<(Span, UnaryOperatorType)>, mut postfix: Vec<UnaryExpressionData>) -> Expression {
+    postfix.reverse();
+    while let Some(unary_expression_data) = postfix.pop() {
+        primary = match unary_expression_data {
+            UnaryExpressionData::Field(span, identifier) => Expression::FieldAccessor(FieldAccessorExpression {
+                span: Span::from_to(primary.get_span(), span),
+                accessee_expression: Box::new(primary),
+                field_name: identifier,
+            }),
+            UnaryExpressionData::Index(span, expression) => Expression::IndexAccessor(IndexAccesorExpression {
+                span: Span::from_to(primary.get_span(), span),
+                indexee_expression: Box::new(primary),
+                index_expression: Box::new(expression),
+            }),
+        }
+    }
+
     while let Some((span, operator)) = prefix.pop() {
         primary = Expression::Unary(UnaryExpression {
-            span: span,
+            span: Span::from_to(span, primary.get_span()),
             operator: operator,
             expression: Box::new(primary),
         });
@@ -49,25 +36,25 @@ fn fold_prefix_unary(mut primary: Expression, mut prefix: Vec<(Span, UnaryOperat
     primary
 }
 
-fn fold_unary(mut primary: Expression, mut unary: Vec<UnaryExpressionData>) -> Expression {
-    unary.reverse();
-    while let Some(unary_expression_data) = unary.pop() {
-        primary = match unary_expression_data {
-            UnaryExpressionData::Field(span, identifier) => Expression::FieldAccessor(FieldAccessorExpression {
-                span: span,
-                accessee_expression: Box::new(primary),
-                field_name: identifier,
-            }),
-            UnaryExpressionData::Index(span, expression) => Expression::IndexAccessor(IndexAccesorExpression {
-                span: span,
-                indexee_expression: Box::new(primary),
-                index_expression: Box::new(expression),
-            }),
-        }
-    }
+named!(parse_unary_prefix<NomSpan, Vec<(Span, UnaryOperatorType)>>,
+    many0!(
+        do_parse!(
+            operator: alt!(
+                tag!("-") |
+                tag!("!") |
+                tag!("~")
+            ) >>
+            ((Span::from_nom_span(&operator), parse_unary_operator_type(&operator)))
+        )
+    )
+);
 
-    primary
-}
+named!(parse_unary_postfix<NomSpan, Vec<UnaryExpressionData>>,
+    many0!(alt!(
+        parse_indexing |
+        parse_field
+    ))
+);
 
 #[derive(Debug)]
 enum UnaryExpressionData {
@@ -109,12 +96,5 @@ mod tests {
     fn it_works() {
         let result = parse_expression(NomSpan::new(CompleteStr("-b[a].c"))).unwrap();
         assert!(result.0.fragment.len() == 0);
-    }
-
-    #[test]
-    fn it_works_2() {
-        let result = parse_expression(NomSpan::new(CompleteStr("!-!~!-b[a].c[5][9].b"))).unwrap();
-        println!("{:#?}", result);
-        // panic!();
     }
 }
