@@ -3,8 +3,8 @@ use ::ast::*;
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FieldAccessorExpression {
     pub span: Span,
-    pub variable_name: Identifier,
-    pub field_name: Identifier,
+    pub accessee_expression: Box<Expression>,
+    pub field_name: String,
 }
 
 impl Spanned for FieldAccessorExpression {

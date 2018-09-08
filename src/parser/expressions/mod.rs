@@ -1,4 +1,3 @@
-use ::nom::IResult;
 use ::parser::*;
 
 /*
@@ -33,13 +32,20 @@ use ::parser::*;
  * `||`
 */
 
+mod binary;
+mod literal;
+mod variable;
+use self::binary::*;
+use self::literal::*;
+use self::variable::*;
+
 named!(pub parse_expression<NomSpan, Expression>,
     do_parse!(
         expression: parse_equality >>
     (expression))
 );
 
-fn parse_operator_type(input: &NomSpan) -> OperatorType {
+pub fn parse_operator_type(input: &NomSpan) -> OperatorType {
     match input.fragment.as_ref() {
         "==" => OperatorType::Equality,
         "+" => OperatorType::Plus,
@@ -50,68 +56,21 @@ fn parse_operator_type(input: &NomSpan) -> OperatorType {
     }
 }
 
-fn fold_expressions(mut lhs: Expression, mut rhs: Vec<(OperatorType, Expression)>) -> Expression {
-    while let Some(r) = rhs.pop() {
-        lhs = Expression::Binary(BinaryExpression {
-            span: Span::from_to(lhs.get_span(), r.1.get_span()),
-            operator: r.0,
-            left_hand: Box::new(lhs),
-            right_hand: Box::new(r.1),
-        });
-    }
-
-    lhs
-}
-
-named!(parse_equality<NomSpan, Expression>,
-    do_parse!(
-        ws0 >>
-        lhs: parse_additive >>
-        ws0 >>
-        rhs: many0!(do_parse!(
-            ws0 >>
-            operator: alt!(tag!("==") | tag!(">=") | tag!("<=")) >>
-            ws0 >>
-            rhs: parse_additive >>
-            ws0 >>
-            ((parse_operator_type(&operator), rhs))
-        )) >>
-    (fold_expressions(lhs, rhs)))
+named!(pub parse_unary<NomSpan, Expression>,
+    alt!(
+        parse_index_accessor |
+        parse_unary_2
+    )
 );
 
-named!(parse_additive<NomSpan, Expression>,
-    do_parse!(
-        ws0 >>
-        lhs: parse_multiplicative >>
-        ws0 >>
-        rhs: many0!(do_parse!(
-            ws0 >>
-            operator: alt!(tag!("+") | tag!("-")) >>
-            ws0 >>
-            rhs: parse_multiplicative >>
-            ws0 >>
-            ((parse_operator_type(&operator), rhs))
-        )) >>
-    (fold_expressions(lhs, rhs)))
+named!(pub parse_unary_2<NomSpan, Expression>,
+    alt!(
+        parse_field_accessor |
+        parse_unary_3
+    )
 );
 
-named!(parse_multiplicative<NomSpan, Expression>,
-    do_parse!(
-        ws0 >>
-        lhs: parse_primary >>
-        ws0 >>
-        rhs: many0!(do_parse!(
-            ws0 >>
-            operator: alt!(tag!("*") | tag!("/")) >>
-            ws0 >>
-            rhs: parse_primary >>
-            ws0 >>
-            ((parse_operator_type(&operator), rhs))
-        )) >>
-    (fold_expressions(lhs, rhs)))
-);
-
-named!(parse_primary<NomSpan, Expression>,
+named!(pub parse_unary_3<NomSpan, Expression>,
     alt!(
         parse_grouped |
         parse_literal |
@@ -120,7 +79,13 @@ named!(parse_primary<NomSpan, Expression>,
     )
 );
 
-named!(parse_primary_non_negated<NomSpan, Expression>,
+named!(parse_unary_3_non_negated<NomSpan, Expression>,
+    alt!(
+        parse_primary
+    )
+);
+
+named!(parse_primary<NomSpan, Expression>,
     alt!(
         parse_grouped |
         parse_literal |
@@ -128,39 +93,73 @@ named!(parse_primary_non_negated<NomSpan, Expression>,
     )
 );
 
-named!(parse_variable<NomSpan, Expression>,
+fn fold_field_accessors(mut accessee: Expression, mut accessors: Vec<(Span, String)>) -> Expression {
+    accessors.reverse();
+    while let Some((span, accessor)) = accessors.pop() {
+        accessee = Expression::FieldAccessor(FieldAccessorExpression {
+            span: Span::from_to(accessee.get_span(), span),
+            accessee_expression: Box::new(accessee),
+            field_name: accessor,
+        });
+    }
+
+    accessee
+}
+
+named!(parse_field_accessor<NomSpan, Expression>,
     do_parse!(
         ws0 >>
-        variable: recognize!(
+        accessee: parse_unary_3 >>
+        ws0 >>
+        accessors: many1!(
             do_parse!(
-                one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") >>
-                many0!(one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")) >>
-                ()
-            )
+                ws0 >>
+                tag!(".") >>
+                ws0 >>
+                accessor: recognize!(
+                    do_parse!(
+                        one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") >>
+                        many0!(one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")) >>
+                        ()
+                    )
+                ) >>
+                ws0 >>
+            ((Span::from_nom_span(&accessor), accessor.fragment.to_string())))
         ) >>
         ws0 >>
-    (Expression::Variable(VariableExpression {
-        span: Span::from_nom_span(&variable),
-        variable_name: variable.fragment.to_string(),
-    })))
+    (fold_field_accessors(accessee, accessors)))
 );
 
-named!(parse_literal<NomSpan, Expression>,
-    alt!(
-        parse_int_literal
-    )
-);
+fn fold_index_accessors(mut indexee: Expression, mut indexers: Vec<(Span, Expression)>) -> Expression {
+    indexers.reverse();
+    while let Some((span, indexer)) = indexers.pop() {
+        indexee = Expression::IndexAccessor(IndexAccesorExpression {
+            span: Span::from_to(indexee.get_span(), span),
+            indexee_expression: Box::new(indexee),
+            index_expression: Box::new(indexer),
+        });
+    }
 
-named!(parse_int_literal<NomSpan, Expression>,
+    indexee
+}
+
+named!(parse_index_accessor<NomSpan, Expression>,
     do_parse!(
         ws0 >>
-        literal: recognize!(many1!(one_of!("1234567890"))) >>
+        indexee: parse_unary_2 >>
         ws0 >>
-    (Expression::Literal(LiteralExpression {
-        span: Span::from_nom_span(&literal),
-        value: literal.fragment.to_string(),
-        literal_expression_type: LiteralType::Int,
-    })))
+        indexers: many1!(
+            do_parse!(
+                ws0 >>
+                tag!("[") >>
+                ws0 >>
+                indexer: parse_expression >>
+                ws0 >>
+                close_tag: tag!("]") >>
+            ((Span::from_nom_span(&close_tag), indexer)))
+        ) >>
+        ws0 >>
+    (fold_index_accessors(indexee, indexers)))
 );
 
 named!(parse_negated<NomSpan, Expression>,
@@ -168,7 +167,7 @@ named!(parse_negated<NomSpan, Expression>,
         ws0 >>
         sign: tag!("-") >>
         ws0 >>
-        expression: parse_primary_non_negated >>
+        expression: parse_unary_3_non_negated >>
         ws0 >>
     (Expression::Negation(NegationExpression {
         span: Span::from_to(Span::from_nom_span(&sign), expression.get_span()),
@@ -226,5 +225,12 @@ mod tests {
     #[test]
     fn it_has_precedence_2() {
         run_and_compare("(10 - 5) * 3", 15);
+    }
+
+    #[test]
+    fn it_works() {
+        let result = parse_expression(NomSpan::new(CompleteStr("b.a[5].c[5][6]"))).unwrap();
+        println!("{:#?}", result);
+        panic!()
     }
 }

@@ -13,3 +13,9 @@ fn it_parses_functions() {
     let source = include_str!("functions.xs");
     parse_str(source).unwrap();
 }
+
+#[test]
+fn it_parses_functions_with_expressions() {
+    let source = include_str!("with-expressions.xs");
+    parse_str(source).unwrap();
+}
