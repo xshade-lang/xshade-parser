@@ -4,6 +4,10 @@ fn main() {
     let c = a + b;
 }
 
+fn minus_negated() {
+    let b = 10 - -5;
+}
+
 fn index() {
     a[b];
 }
@@ -34,4 +38,12 @@ fn multi_field() {
 
 fn indexed_field_negated() {
     -b[c].a;
+}
+
+fn indexed_indexed_negated() {
+    -b[-c];
+}
+
+fn ridiculous() {
+    !-!~!-b[a].c[5][9].b;
 }

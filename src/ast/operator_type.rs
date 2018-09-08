@@ -6,3 +6,10 @@ pub enum OperatorType {
     Multiply,
     Divide,
 }
+
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum UnaryOperatorType {
+    Negate,
+    Not,
+    Complement,
+}

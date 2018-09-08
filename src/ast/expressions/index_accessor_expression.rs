@@ -3,8 +3,8 @@ use ::ast::*;
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct IndexAccesorExpression {
     pub span: Span,
-    pub indexee_expression: Box<Expression>,
     pub index_expression: Box<Expression>,
+    pub indexee_expression: Box<Expression>,
 }
 
 impl Spanned for IndexAccesorExpression {

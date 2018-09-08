@@ -2,36 +2,36 @@ use ::parser::*;
 
 /*
  * Group Operators
- * `( )`
+ * `( )` group
  * Unary Operators
- * `-`
- * `!`
- * `~`
- * `.foo`
- * `[0]`
+ * `-` negate
+ * `!` binary not
+ * `~` bitwise complement
+ * `.foo` field access
+ * `[0]` index access
  * Binary Operators
- * `*`
- * `/`
- * `%`
+ * `*` multiply
+ * `/` divide
+ * `%` modulo
  * 
- * `+`
- * `-`
+ * `+` add
+ * `-` divide
  * 
- * `<<`
- * `>>`
+ * `<<` shift left
+ * `>>` shift right
  * 
- * `>=`
- * `<=`
+ * `>=` greater or equal to
+ * `<=` less or equal to
  * 
- * `==`
- * `!=`
+ * `==` equals
+ * `!=` not equal
  * 
- * `&`
- * `^`
- * `|`
+ * `&` bitwise and
+ * `^` bitwise not
+ * `|` bitwise or
  * 
- * `&&`
- * `||`
+ * `&&` binary and
+ * `||` binary or
 */
 
 mod binary;
@@ -58,6 +58,15 @@ pub fn parse_operator_type(input: &NomSpan) -> OperatorType {
         "-" => OperatorType::Minus,
         "*" => OperatorType::Multiply,
         "/" => OperatorType::Divide,
+        _ => panic!("unknown operator, this should never happen, if it happens a parser did not check correctly"),
+    }
+}
+
+pub fn parse_unary_operator_type(input: &NomSpan) -> UnaryOperatorType {
+    match input.fragment.as_ref() {
+        "-" => UnaryOperatorType::Negate,
+        "!" => UnaryOperatorType::Not,
+        "~" => UnaryOperatorType::Complement,
         _ => panic!("unknown operator, this should never happen, if it happens a parser did not check correctly"),
     }
 }
@@ -100,5 +109,10 @@ mod tests {
     #[test]
     fn it_has_precedence_2() {
         run_and_compare("(10 - 5) * 3", 15);
+    }
+
+    #[test]
+    fn it_does_negation() {
+        run_and_compare("10 - -5", 15);
     }
 }
