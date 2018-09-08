@@ -19,10 +19,3 @@ fn it_parses_functions_with_expressions() {
     let source = include_str!("with-expressions.xs");
     parse_str(source).unwrap();
 }
-
-#[test]
-fn test_error() {
-    let result = parse_str("fn main() { a + b }");
-    println!("{:#?}", result);
-    panic!();
-}
