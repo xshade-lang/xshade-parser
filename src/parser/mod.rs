@@ -107,6 +107,7 @@ named!(parse_block_declaration<NomSpan, BlockDeclaration>,
 
 named!(parse<NomSpan, Ast>,
     do_parse!(
+        ws0 >>
         ast: many0!(
             alt!(
                 parse_struct |
@@ -114,7 +115,7 @@ named!(parse<NomSpan, Ast>,
             )
         ) >>
         ws0 >>
-        eof!() >>
+        return_error!(add_return_error!(ErrorKind::Custom(ParseErrorKind::InvalidTopLevelItem as u32), eof!())) >>
         (ast)
     )
 );
@@ -140,18 +141,24 @@ pub fn parse_str(program: &str) -> ParseResult<Ast> {
             Ok(ast)
         },
         Err(Err::Incomplete(_needed)) => {
-            unimplemented!("handle incomplete")
+            Err(ParseError::new(Span::new(0, 0, 0, 0), ParseErrorKind::MissingError))
         },
         Err(Err::Error(error)) | Err(Err::Failure(error)) => {
             match error {
-                Context::Code(a, ErrorKind::Custom(error_number)) => {
+                Context::Code(span, ErrorKind::Custom(error_number)) => {
                     return Err(ParseError::new(
-                        Span::from_nom_span(&a),
+                        Span::from_nom_span(&span),
                         ParseErrorKind::from(error_number)
                     ));
                 }
 
-                _ => unimplemented!("handle error")
+                Context::Code(span, _error_kind) => {
+                    println!("{:#?}", _error_kind);
+                    return Err(ParseError::new(
+                        Span::from_nom_span(&span),
+                        ParseErrorKind::MissingError,
+                    ));
+                }
             }
         },
     }
