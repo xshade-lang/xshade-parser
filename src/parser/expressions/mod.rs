@@ -7,6 +7,8 @@ use ::parser::*;
  * `-`
  * `!`
  * `~`
+ * `.foo`
+ * `[0]`
  * Binary Operators
  * `*`
  * `/`
@@ -56,33 +58,63 @@ pub fn parse_operator_type(input: &NomSpan) -> OperatorType {
     }
 }
 
+fn fold_unary(mut primary: Expression, mut unary: Vec<UnaryExpressionData>) -> Expression {
+    unary.reverse();
+    while let Some(unary_expression_data) = unary.pop() {
+        primary = match unary_expression_data {
+            UnaryExpressionData::Field(span, identifier) => Expression::FieldAccessor(FieldAccessorExpression {
+                span: span,
+                accessee_expression: Box::new(primary),
+                field_name: identifier,
+            }),
+            UnaryExpressionData::Index(span, expression) => Expression::IndexAccessor(IndexAccesorExpression {
+                span: span,
+                indexee_expression: Box::new(primary),
+                index_expression: Box::new(expression),
+            }),
+        }
+    }
+
+    primary
+}
+
+#[derive(Debug)]
+enum UnaryExpressionData {
+    Index(Span, Expression),
+    Field(Span, String),
+}
+
 named!(pub parse_unary<NomSpan, Expression>,
     alt!(
-        parse_index_accessor |
-        parse_unary_2
+        parse_negated_unary |
+        parse_non_negated_unary
     )
 );
 
-named!(pub parse_unary_2<NomSpan, Expression>,
+named!(pub parse_non_negated_unary<NomSpan, Expression>,
     alt!(
-        parse_field_accessor |
-        parse_unary_3
-    )
-);
-
-named!(pub parse_unary_3<NomSpan, Expression>,
-    alt!(
-        parse_grouped |
-        parse_literal |
-        parse_variable |
-        parse_negated
-    )
-);
-
-named!(parse_unary_3_non_negated<NomSpan, Expression>,
-    alt!(
+        do_parse!(
+            primary: parse_primary >>
+            unary: many1!(alt!(
+                parse_indexing |
+                parse_field
+            )) >>
+        (fold_unary(primary, unary))) |
         parse_primary
     )
+);
+
+named!(parse_negated_unary<NomSpan, Expression>,
+    do_parse!(
+        ws0 >>
+        sign: tag!("-") >>
+        ws0 >>
+        expression: parse_non_negated_unary >>
+        ws0 >>
+    (Expression::Negation(NegationExpression {
+        span: Span::from_to(Span::from_nom_span(&sign), expression.get_span()),
+        expression: Box::new(expression),
+    })))
 );
 
 named!(parse_primary<NomSpan, Expression>,
@@ -93,86 +125,30 @@ named!(parse_primary<NomSpan, Expression>,
     )
 );
 
-fn fold_field_accessors(mut accessee: Expression, mut accessors: Vec<(Span, String)>) -> Expression {
-    accessors.reverse();
-    while let Some((span, accessor)) = accessors.pop() {
-        accessee = Expression::FieldAccessor(FieldAccessorExpression {
-            span: Span::from_to(accessee.get_span(), span),
-            accessee_expression: Box::new(accessee),
-            field_name: accessor,
-        });
-    }
-
-    accessee
-}
-
-named!(parse_field_accessor<NomSpan, Expression>,
+named!(parse_field<NomSpan, UnaryExpressionData>,
     do_parse!(
         ws0 >>
-        accessee: parse_unary_3 >>
-        ws0 >>
-        accessors: many1!(
+        dot: tag!(".") >>
+        accessor: recognize!(
             do_parse!(
-                ws0 >>
-                tag!(".") >>
-                ws0 >>
-                accessor: recognize!(
-                    do_parse!(
-                        one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") >>
-                        many0!(one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")) >>
-                        ()
-                    )
-                ) >>
-                ws0 >>
-            ((Span::from_nom_span(&accessor), accessor.fragment.to_string())))
+                one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") >>
+                many0!(one_of!("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")) >>
+                ()
+            )
         ) >>
         ws0 >>
-    (fold_field_accessors(accessee, accessors)))
+    (UnaryExpressionData::Field(Span::from_to(Span::from_nom_span(&dot), Span::from_nom_span(&accessor)), accessor.fragment.to_string())))
 );
 
-fn fold_index_accessors(mut indexee: Expression, mut indexers: Vec<(Span, Expression)>) -> Expression {
-    indexers.reverse();
-    while let Some((span, indexer)) = indexers.pop() {
-        indexee = Expression::IndexAccessor(IndexAccesorExpression {
-            span: Span::from_to(indexee.get_span(), span),
-            indexee_expression: Box::new(indexee),
-            index_expression: Box::new(indexer),
-        });
-    }
-
-    indexee
-}
-
-named!(parse_index_accessor<NomSpan, Expression>,
+named!(parse_indexing<NomSpan, UnaryExpressionData>,
     do_parse!(
         ws0 >>
-        indexee: parse_unary_2 >>
+        open_tag: tag!("[") >>
         ws0 >>
-        indexers: many1!(
-            do_parse!(
-                ws0 >>
-                tag!("[") >>
-                ws0 >>
-                indexer: parse_expression >>
-                ws0 >>
-                close_tag: tag!("]") >>
-            ((Span::from_nom_span(&close_tag), indexer)))
-        ) >>
+        indexer: parse_expression >>
         ws0 >>
-    (fold_index_accessors(indexee, indexers)))
-);
-
-named!(parse_negated<NomSpan, Expression>,
-    do_parse!(
-        ws0 >>
-        sign: tag!("-") >>
-        ws0 >>
-        expression: parse_unary_3_non_negated >>
-        ws0 >>
-    (Expression::Negation(NegationExpression {
-        span: Span::from_to(Span::from_nom_span(&sign), expression.get_span()),
-        expression: Box::new(expression),
-    })))
+        close_tag: tag!("]") >>
+    (UnaryExpressionData::Index(Span::from_to(Span::from_nom_span(&open_tag), Span::from_nom_span(&close_tag)), indexer)))
 );
 
 named!(parse_grouped<NomSpan, Expression>,
@@ -229,8 +205,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let result = parse_expression(NomSpan::new(CompleteStr("b.a[5].c[5][6]"))).unwrap();
-        println!("{:#?}", result);
-        panic!()
+        let result = parse_expression(NomSpan::new(CompleteStr("-b[a].c"))).unwrap();
+        assert!(result.0.fragment.len() == 0);
     }
 }
